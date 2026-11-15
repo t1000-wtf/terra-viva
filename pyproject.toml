@@ -26,6 +26,7 @@ dependencies = [
     "google-genai>=0.1.0",
     "psycopg[binary]",
     "email-validator",
+    "pydantic[email]",
 ]
 
 [build-system]
