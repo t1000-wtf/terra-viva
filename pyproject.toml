@@ -24,6 +24,7 @@ dependencies = [
     "pytest-asyncio>=0.23.0",
     "pytest-mock>=3.14.0",
     "google-genai>=0.1.0",
+    "psycopg[binary]",
 ]
 
 [build-system]
