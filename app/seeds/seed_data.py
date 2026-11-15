@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+﻿from sqlalchemy.orm import Session
 from app.core.database import SessionLocal, Base, engine
 from app.models.all_models import CropCatalog, SocialIndicatorRecord
 
@@ -209,13 +209,13 @@ def seed_database(db: Session):
     ]
 
     for item in crops_data:
-        existing = db.query(CropCatalog).filter(CropCatalog.common_name == item["common_name"]).first()
-        if not existing:
-            c = CropCatalog(**item)
-            db.add(c)
-        else:
-            for k, v in item.items():
-                setattr(existing, k, v)
+        existing = db.query(CropCatalog).filter(
+            CropCatalog.common_name == item["common_name"]
+        ).first()
+
+        if existing is None:
+            db.add(CropCatalog(**item))
+
 
     # 2. Dados Socioeconômicos Municipais de Referência (IBGE / Atlas Brasil)
     social_data = [
@@ -301,16 +301,16 @@ def seed_database(db: Session):
         }
     ]
 
+
     for item in social_data:
         existing = db.query(SocialIndicatorRecord).filter(
-            SocialIndicatorRecord.municipality_ibge_code == item["municipality_ibge_code"]
+            SocialIndicatorRecord.municipality_ibge_code
+            == item["municipality_ibge_code"]
         ).first()
-        if not existing:
-            s = SocialIndicatorRecord(**item)
-            db.add(s)
-        else:
-            for k, v in item.items():
-                setattr(existing, k, v)
+
+        if existing is None:
+            db.add(SocialIndicatorRecord(**item))
+
 
     db.commit()
 
