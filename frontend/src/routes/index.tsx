@@ -3,13 +3,11 @@ import { AppLayout } from '../components/layout/AppLayout'
 
 // Pages
 import DashboardPage from '../pages/dashboard/DashboardPage'
-import { ProfilePage } from '../pages/Profile'
 import { PropertiesPage } from '../pages/Properties'
 import { PropertyDetailPage } from '../pages/PropertyDetail'
 import { PlotDetailPage } from '../pages/PlotDetail'
 import CropsPage from '../pages/crops/CropsPage'
 import CropDetailPage from '../pages/crops/CropDetailPage'
-import PrioritiesPage from '../pages/priorities/PrioritiesPage'
 import EnvironmentalPage from '../pages/environmental/EnvironmentalPage'
 import SocialPage from '../pages/social/SocialPage'
 import { EconomicPage } from '../pages/Economic'
@@ -24,14 +22,12 @@ export function AppRouter() {
     <Routes>
       <Route element={<AppLayout />}>
         <Route path="/" element={<DashboardPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
         <Route path="/properties" element={<PropertiesPage />} />
         <Route path="/properties/:propertyId" element={<PropertyDetailPage />} />
         <Route path="/properties/:propertyId/plots/:plotId" element={<PlotDetailPage />} />
         <Route path="/crops" element={<CropsPage />} />
         <Route path="/crops/:cropId" element={<CropDetailPage />} />
         <Route path="/plots/:plotId/history" element={<HistoryPage />} />
-        <Route path="/priorities" element={<PrioritiesPage />} />
         <Route path="/environmental/:propertyId" element={<EnvironmentalPage />} />
         <Route path="/social/:propertyId" element={<SocialPage />} />
         <Route path="/economic" element={<EconomicPage />} />

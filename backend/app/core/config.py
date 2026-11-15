@@ -2,18 +2,11 @@ from pydantic_settings import BaseSettings
 from pydantic import ConfigDict
 from typing import List, Optional
 import os
-import secrets
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "TerraViva Backend"
     VERSION: str = "1.1.0"
     API_V1_STR: str = "/api/v1"
-    
-    # Segurança
-    # Em produção, SECRET_KEY deve vir obrigatoriamente de variável de ambiente
-    SECRET_KEY: str = os.getenv("SECRET_KEY", secrets.token_urlsafe(32))
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 # 24 horas (mais seguro que 7 dias)
     
     # Banco de Dados
     DATABASE_URL: str = "sqlite:///./terraviva.db"

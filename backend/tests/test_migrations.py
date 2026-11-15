@@ -42,8 +42,12 @@ def test_fresh_database_migrates_to_current_schema(tmp_path):
         column["name"]
         for column in inspector.get_columns("environmental_records")
     } >= {"product", "data_status", "processing_method"}
+    property_columns = {column["name"]: column for column in inspector.get_columns("properties")}
+    assistant_columns = {column["name"]: column for column in inspector.get_columns("assistant_chats")}
+    assert property_columns["owner_id"]["nullable"] is True
+    assert assistant_columns["user_id"]["nullable"] is True
     with engine.connect() as connection:
-        assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "57f8a7c3d12e"
+        assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "8c4a12de901f"
         differences = compare_metadata(
             MigrationContext.configure(connection),
             Base.metadata

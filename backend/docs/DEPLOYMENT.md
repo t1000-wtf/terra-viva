@@ -36,13 +36,11 @@ Crie um arquivo `.env` na raiz do diretório `backend` (ou utilize as variáveis
 
 ```env
 PROJECT_NAME="TerraViva Backend"
-SECRET_KEY="sua-chave-secreta-jwt-de-producao-com-mais-de-32-caracteres"
-ACCESS_TOKEN_EXPIRE_MINUTES=1440
 DATABASE_URL="sqlite:///./terraviva.db"  # Em produção: postgresql+psycopg://user:pass@host:5432/terraviva
 BACKEND_CORS_ORIGINS='["https://seu-frontend.example"]'
 ```
 
-No Render, defina `SECRET_KEY` como um valor aleatório persistente, configure `DATABASE_URL` com a URL PostgreSQL interna e informe as origens reais do frontend em `BACKEND_CORS_ORIGINS`. Não use os valores de exemplo em produção.
+No Render, configure `DATABASE_URL` com a URL PostgreSQL interna e informe as origens reais do frontend em `BACKEND_CORS_ORIGINS`.
 
 ## 4. PostgreSQL e migrações
 

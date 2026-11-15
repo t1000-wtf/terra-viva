@@ -2,8 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from app.core.database import get_db
-from app.core.dependencies import get_current_user
-from app.models.all_models import User, Property
+from app.models.all_models import Property
 from app.schemas.all_schemas import PropertyCreate, PropertyResponse
 from app.adapters.ibge_adapter import IbgeAdapter
 
@@ -12,7 +11,6 @@ router = APIRouter(prefix="/properties", tags=["Propriedades"])
 @router.post("", response_model=PropertyResponse, status_code=status.HTTP_201_CREATED)
 async def create_property(
     prop_in: PropertyCreate,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     ibge_code = prop_in.ibge_code
@@ -23,7 +21,7 @@ async def create_property(
             ibge_code = ibge_info.get("ibge_code")
 
     prop = Property(
-        owner_id=current_user.id,
+        owner_id=None,
         name=prop_in.name,
         description=prop_in.description,
         total_area_ha=prop_in.total_area_ha,
@@ -43,18 +41,16 @@ async def create_property(
 
 @router.get("", response_model=List[PropertyResponse])
 def list_properties(
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    return db.query(Property).filter(Property.owner_id == current_user.id).all()
+    return db.query(Property).all()
 
 @router.get("/{property_id}", response_model=PropertyResponse)
 def get_property(
     property_id: int,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    prop = db.query(Property).filter(Property.id == property_id, Property.owner_id == current_user.id).first()
+    prop = db.query(Property).filter(Property.id == property_id).first()
     if not prop:
         raise HTTPException(status_code=404, detail="Propriedade não encontrada ou acesso não autorizado.")
     return prop
@@ -63,10 +59,9 @@ def get_property(
 def update_property(
     property_id: int,
     prop_in: PropertyCreate,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    prop = db.query(Property).filter(Property.id == property_id, Property.owner_id == current_user.id).first()
+    prop = db.query(Property).filter(Property.id == property_id).first()
     if not prop:
         raise HTTPException(status_code=404, detail="Propriedade não encontrada.")
 
@@ -80,10 +75,9 @@ def update_property(
 @router.delete("/{property_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_property(
     property_id: int,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    prop = db.query(Property).filter(Property.id == property_id, Property.owner_id == current_user.id).first()
+    prop = db.query(Property).filter(Property.id == property_id).first()
     if not prop:
         raise HTTPException(status_code=404, detail="Propriedade não encontrada.")
     db.delete(prop)

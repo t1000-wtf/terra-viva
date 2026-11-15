@@ -4,20 +4,12 @@ A API REST do TerraViva foi desenvolvida com **FastAPI**, **SQLAlchemy** e supor
 
 ## Sumário de Módulos da API (v1)
 
-### 1. Autenticação (`/api/v1/auth`)
-- `POST /register`: Cadastro de usuários (Agricultores, Técnicos Agrícolas e Administradores). Cria automaticamente perfil de produtor e pesos iniciais.
-- `POST /login`: Autenticação via JWT (OAuth2 Bearer Token) com verificação segura de senha via `bcrypt`.
-- `GET /me`: Retorna dados do usuário autenticado no cabeçalho `Authorization: Bearer <token>`.
-
-### 2. Usuários e Perfil do Produtor (`/api/v1/users`)
-- `GET /profile`: Consulta perfil do usuário.
-- `PUT /profile`: Atualização de dados cadastrais.
-- `GET /farmer-profile`: Recupera indicadores socioagrícolas voluntários do agricultor (familiar vs empresarial, disponibilidade de mão de obra, maquinário, irrigação, crédito, assistência técnica).
-- `PUT /farmer-profile`: Atualização dos indicadores voluntários do agricultor.
+### Acesso público e dados vinculados à propriedade
+As rotas funcionais da API v1 são públicas e não exigem `Authorization: Bearer`. Recursos são consultados pelo identificador da propriedade ou talhão. Rotas de autenticação, cadastro, perfil de usuário e prioridades por conta foram desativadas. Propriedades novas não recebem `owner_id`; registros antigos mantêm seus vínculos.
 
 ### 3. Propriedades Agrícolas (`/api/v1/properties`)
 - `POST /`: Cadastro de propriedade com latitude, longitude, área total/cultivada, município/UF e delimitação em GeoJSON. Consulta automática da API do IBGE para relacionar código municipal.
-- `GET /`: Listagem de propriedades do usuário autenticado.
+- `GET /`: Listagem das propriedades cadastradas na plataforma.
 - `GET /{id}`: Detalhes de uma propriedade específica.
 - `PUT /{id}`: Atualização de dados cadastrais e espaciais.
 - `DELETE /{id}`: Exclusão com cascata em conformidade com a LGPD.
@@ -37,9 +29,8 @@ A API REST do TerraViva foi desenvolvida com **FastAPI**, **SQLAlchemy** e supor
 - `POST /`: Registro de safra/plantio anterior com produtividade obtida, custos e ocorrência de pragas.
 - `GET /`: Linha do tempo histórica de safras do talhão.
 
-### 7. Prioridades e Pesos Multicritério (`/api/v1/priorities`)
-- `GET /`: Consulta os pesos definidos pelo agricultor para as 3 dimensões (Ambiental, Social e Econômica).
-- `PUT /`: Atualização dos pesos (validação automática de que a soma deve ser exatamente 100%) e sub-prioridades (conservação de água, recuperação de solo, renda, etc).
+### 7. Preferências de usuário
+As preferências antes armazenadas por conta não são solicitadas sem autenticação. Recomendações e estimativas usam os padrões do motor quando não existe perfil individual associado; dados antigos de perfis e prioridades permanecem preservados no banco.
 
 ### 8. Dimensão Ambiental e NASA (`/api/v1/environmental`)
 - `POST /sync/{property_id}`: Sincronização em tempo real conectando às APIs da NASA:

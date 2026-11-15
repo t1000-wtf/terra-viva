@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.core.dependencies import get_current_user
 from app.models.all_models import User, Property, FarmerProfile, SocialIndicatorRecord
 from app.engine.social_engine import SocialAnalysisEngine
 from app.schemas.all_schemas import SocialIndicatorResponse
@@ -11,14 +10,13 @@ router = APIRouter(prefix="/social", tags=["Dimensão Social e Regional"])
 @router.get("/diagnostics/{property_id}")
 def get_social_diagnostic(
     property_id: int,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    prop = db.query(Property).filter(Property.id == property_id, Property.owner_id == current_user.id).first()
+    prop = db.query(Property).filter(Property.id == property_id).first()
     if not prop:
         raise HTTPException(status_code=404, detail="Propriedade não encontrada.")
 
-    profile = db.query(FarmerProfile).filter(FarmerProfile.user_id == current_user.id).first()
+    profile = None
     
     # Buscar indicador social municipal correspondente
     social_rec = None

@@ -3,7 +3,6 @@ from sqlalchemy.orm import Session
 from typing import List, Dict, Any
 from datetime import datetime
 from app.core.database import get_db
-from app.core.dependencies import get_current_user
 from app.models.all_models import (
     User, Property, Plot, CropCatalog, FarmerProfile, UserPriority,
     EnvironmentalRecord, Recommendation, Alert
@@ -17,16 +16,15 @@ router = APIRouter(prefix="/recommendations", tags=["Recomendações e Rotação
 @router.post("/generate/{plot_id}", response_model=List[RecommendationResponse])
 def generate_plot_recommendations(
     plot_id: int,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    plot = db.query(Plot).join(Property).filter(Plot.id == plot_id, Property.owner_id == current_user.id).first()
+    plot = db.query(Plot).join(Property).filter(Plot.id == plot_id).first()
     if not plot:
         raise HTTPException(status_code=404, detail="Talhão não encontrado.")
 
     property_id = plot.property_id
-    farmer_profile = db.query(FarmerProfile).filter(FarmerProfile.user_id == current_user.id).first()
-    user_priority = db.query(UserPriority).filter(UserPriority.user_id == current_user.id).first()
+    farmer_profile = None
+    user_priority = None
     
     # Obter dados ambientais recentes da propriedade
     env_records = db.query(EnvironmentalRecord).filter(
@@ -97,10 +95,9 @@ def generate_plot_recommendations(
 @router.get("/plot/{plot_id}", response_model=List[RecommendationResponse])
 def get_recommendations_by_plot(
     plot_id: int,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    plot = db.query(Plot).join(Property).filter(Plot.id == plot_id, Property.owner_id == current_user.id).first()
+    plot = db.query(Plot).join(Property).filter(Plot.id == plot_id).first()
     if not plot:
         raise HTTPException(status_code=404, detail="Talhão não encontrado.")
     return db.query(Recommendation).filter(Recommendation.plot_id == plot_id).all()

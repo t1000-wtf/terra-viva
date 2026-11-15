@@ -38,22 +38,7 @@ client = TestClient(app)
 
 @pytest.fixture(scope="session")
 def auth_headers():
-    # Registrar usuário de teste
-    res = client.post("/api/v1/auth/register", json={
-        "name": "Agricultor João da Silva",
-        "email": "joao.silva@agriculturafamiliar.org",
-        "password": "SenhaSegura123!",
-        "role": "agricultor"
-    })
-    assert res.status_code in [201, 400]
-    
-    # Login
-    login_res = client.post("/api/v1/auth/login", json={
-        "email": "joao.silva@agriculturafamiliar.org",
-        "password": "SenhaSegura123!"
-    })
-    token = login_res.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+    return {}
 
 def test_root_and_sources():
     res = client.get("/")
@@ -63,7 +48,6 @@ def test_root_and_sources():
     openapi = client.get("/api/v1/openapi.json")
     assert openapi.status_code == 200
     expected_routes = {
-        "/api/v1/auth/login",
         "/api/v1/properties",
         "/api/v1/properties/{property_id}/plots",
         "/api/v1/plots/{plot_id}/history",
@@ -77,6 +61,8 @@ def test_root_and_sources():
         "/api/v1/dashboard/summary/{property_id}"
     }
     assert expected_routes.issubset(openapi.json()["paths"])
+    assert not any("security" in operation for path in openapi.json()["paths"].values() for operation in path.values())
+    assert "/api/v1/auth/login" not in openapi.json()["paths"]
 
     # Listar fontes científicas
     sources_res = client.get("/api/v1/sources")
@@ -91,26 +77,12 @@ def test_test_database_connection_and_seeded_catalog():
         assert db.execute(text("SELECT 1")).scalar_one() == 1
         assert db.query(CropCatalog).count() >= 8
 
-def test_registration_and_profile_cannot_escalate_user_role(auth_headers):
-    registration = client.post("/api/v1/auth/register", json={
-        "name": "Tentativa de Administrador",
-        "email": "role-escalation@example.com",
-        "password": "SenhaSegura123!",
-        "role": "administrador"
-    })
-    assert registration.status_code == 403
+def test_authentication_routes_are_disabled():
+    assert client.post("/api/v1/auth/register", json={}).status_code == 404
+    assert client.post("/api/v1/auth/login", json={}).status_code == 404
+    assert client.get("/api/v1/auth/me").status_code == 404
+    assert client.get("/api/v1/users/profile").status_code == 404
 
-    profile_update = client.put(
-        "/api/v1/users/profile",
-        headers=auth_headers,
-        json={"role": "administrador"}
-    )
-    assert profile_update.status_code == 403
-    current_user = client.get("/api/v1/auth/me", headers=auth_headers)
-    assert current_user.status_code == 200
-    assert current_user.json()["role"] == "agricultor"
-
-    assert client.get("/api/v1/users/profile").status_code == 401
 
 def test_crop_catalog():
     res = client.get("/api/v1/crops")
@@ -123,24 +95,6 @@ def test_crop_catalog():
     assert "Sorgo" in names
     assert "Crotalária" in names
 
-def test_farmer_profile_and_priorities(auth_headers):
-    # Obter perfil
-    res = client.get("/api/v1/users/farmer-profile", headers=auth_headers)
-    assert res.status_code == 200
-    
-    # Atualizar prioridades multicritério
-    prio_res = client.put("/api/v1/priorities", headers=auth_headers, json={
-        "weight_environmental": 45.0,
-        "weight_social": 30.0,
-        "weight_economic": 25.0,
-        "priority_water_conservation": 5,
-        "priority_soil_recovery": 5
-    })
-    assert prio_res.status_code == 200
-    data = prio_res.json()
-    assert data["weight_environmental"] == 45.0
-    assert data["weight_social"] == 30.0
-    assert data["weight_economic"] == 25.0
 
 def test_property_and_plots_flow(auth_headers):
     # 1. Cadastrar Propriedade

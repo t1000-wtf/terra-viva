@@ -66,7 +66,7 @@ class Property(Base):
     __tablename__ = "properties"
     
     id = Column(Integer, primary_key=True, index=True)
-    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     total_area_ha = Column(Float, nullable=False)
@@ -301,7 +301,7 @@ class AssistantChat(Base):
     __tablename__ = "assistant_chats"
     
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     property_id = Column(Integer, ForeignKey("properties.id"), nullable=True)
     role = Column(String(50), nullable=False) # "user", "assistant"
     message = Column(Text, nullable=False)

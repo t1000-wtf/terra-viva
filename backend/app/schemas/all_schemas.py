@@ -77,7 +77,7 @@ class PropertyCreate(PropertyBase):
 class PropertyResponse(PropertyBase):
     model_config = ConfigDict(from_attributes=True)
     id: int
-    owner_id: int
+    owner_id: Optional[int] = None
     created_at: datetime
 
 class PlotBase(BaseModel):

@@ -3,8 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from datetime import datetime
 from app.core.database import get_db
-from app.core.dependencies import get_current_user
-from app.models.all_models import User, Property, AssistantChat, Recommendation
+from app.models.all_models import Property, AssistantChat, Recommendation
 from app.schemas.all_schemas import ChatMessageRequest, ChatMessageResponse
 from app.services.ai_assistant import AIAssistantService
 
@@ -13,12 +12,11 @@ router = APIRouter(prefix="/assistant", tags=["Assistente Agronômico"])
 @router.post("/chat", response_model=ChatMessageResponse)
 async def chat_with_assistant(
     request: ChatMessageRequest,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     context_data = {}
     if request.property_id:
-        prop = db.query(Property).filter(Property.id == request.property_id, Property.owner_id == current_user.id).first()
+        prop = db.query(Property).filter(Property.id == request.property_id).first()
         if prop:
             recs = db.query(Recommendation).filter(Recommendation.property_id == prop.id).limit(3).all()
             context_data = {
@@ -38,13 +36,12 @@ async def chat_with_assistant(
 
     # Buscar histórico recente
     history_records = db.query(AssistantChat).filter(
-        AssistantChat.user_id == current_user.id
+        AssistantChat.property_id == request.property_id
     ).order_by(AssistantChat.created_at.desc()).limit(6).all()
     history = [{"role": h.role, "message": h.message} for h in reversed(history_records)]
 
     # Registrar pergunta do usuário
     user_chat = AssistantChat(
-        user_id=current_user.id,
         property_id=request.property_id,
         role="user",
         message=request.message,
@@ -61,7 +58,6 @@ async def chat_with_assistant(
 
     # Registrar resposta do assistente
     assistant_chat = AssistantChat(
-        user_id=current_user.id,
         property_id=request.property_id,
         role="assistant",
         message=ai_result["reply"],
@@ -79,12 +75,9 @@ async def chat_with_assistant(
 @router.get("/history")
 def get_chat_history(
     property_id: int = None,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    query = db.query(AssistantChat).filter(AssistantChat.user_id == current_user.id)
-    if property_id:
-        query = query.filter(AssistantChat.property_id == property_id)
+    query = db.query(AssistantChat).filter(AssistantChat.property_id == property_id)
     records = query.order_by(AssistantChat.created_at.asc()).limit(50).all()
     return [
         {

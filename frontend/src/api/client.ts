@@ -9,16 +9,4 @@ export const client = axios.create({
   },
 })
 
-// Request interceptor: attach Bearer token
-client.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('terraviva_token')
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
-    }
-    return config
-  },
-  (error) => Promise.reject(error)
-)
-
 export default client

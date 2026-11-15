@@ -2,14 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from app.core.database import get_db
-from app.core.dependencies import get_current_user
-from app.models.all_models import User, Plot, CropHistory, Property
+from app.models.all_models import Plot, CropHistory
 from app.schemas.all_schemas import CropHistoryCreate, CropHistoryResponse
 
 router = APIRouter(prefix="/plots/{plot_id}/history", tags=["Histórico Agrícola"])
 
-def verify_plot_access(plot_id: int, user: User, db: Session) -> Plot:
-    plot = db.query(Plot).join(Property).filter(Plot.id == plot_id, Property.owner_id == user.id).first()
+def verify_plot_access(plot_id: int, db: Session) -> Plot:
+    plot = db.query(Plot).filter(Plot.id == plot_id).first()
     if not plot:
         raise HTTPException(status_code=404, detail="Talhão não encontrado ou não pertence ao usuário.")
     return plot
@@ -18,10 +17,9 @@ def verify_plot_access(plot_id: int, user: User, db: Session) -> Plot:
 def add_crop_history(
     plot_id: int,
     history_in: CropHistoryCreate,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    verify_plot_access(plot_id, current_user, db)
+    verify_plot_access(plot_id, db)
     history = CropHistory(
         plot_id=plot_id,
         crop_name=history_in.crop_name,
@@ -42,8 +40,7 @@ def add_crop_history(
 @router.get("", response_model=List[CropHistoryResponse])
 def get_plot_history(
     plot_id: int,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    verify_plot_access(plot_id, current_user, db)
+    verify_plot_access(plot_id, db)
     return db.query(CropHistory).filter(CropHistory.plot_id == plot_id).order_by(CropHistory.planting_date.desc()).all()

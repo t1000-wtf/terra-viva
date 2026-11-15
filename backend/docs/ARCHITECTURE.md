@@ -24,7 +24,7 @@ O **TerraViva** é uma plataforma inovadora de inteligência socioambiental e ag
 
 ### 2.4 Arquitetura: Monólito Modular Limpo (Clean Modular Monolith)
 - **Camadas**:
-  - `core/`: Segurança JWT, bcrypt, banco de dados e configurações.
+  - `core/`: Banco de dados e configurações. As rotas da plataforma são públicas; vínculos opcionais de usuário são mantidos para compatibilidade com dados legados.
   - `models/`: Entidades relacionais de domínio (Propriedades, Talhões, Culturas, Registros Ambientais, Indicadores Sociais, etc).
   - `schemas/`: DTOs de entrada e saída validados por Pydantic.
   - `adapters/`: Conectores isolados para serviços externos (NASA POWER, SMAP, Landsat/MODIS, ECOSTRESS, SRTM, IBGE, INMET).

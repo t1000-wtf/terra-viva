@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.api.v1 import (
-    auth, users, properties, plots, crops, history, priorities,
+    properties, plots, crops, history,
     environmental, social, economic, recommendations, diagnostics,
     assistant, sources, dashboard
 )
@@ -40,13 +40,10 @@ app.add_middleware(
 
 # Registrar Rotas da API v1
 api_v1_prefix = settings.API_V1_STR
-app.include_router(auth.router, prefix=api_v1_prefix)
-app.include_router(users.router, prefix=api_v1_prefix)
 app.include_router(properties.router, prefix=api_v1_prefix)
 app.include_router(plots.router, prefix=api_v1_prefix)
 app.include_router(crops.router, prefix=api_v1_prefix)
 app.include_router(history.router, prefix=api_v1_prefix)
-app.include_router(priorities.router, prefix=api_v1_prefix)
 app.include_router(environmental.router, prefix=api_v1_prefix)
 app.include_router(social.router, prefix=api_v1_prefix)
 app.include_router(economic.router, prefix=api_v1_prefix)

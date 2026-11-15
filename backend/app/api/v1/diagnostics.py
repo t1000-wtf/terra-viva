@@ -3,7 +3,6 @@ from sqlalchemy.orm import Session
 from typing import Dict, Any, List
 from datetime import datetime
 from app.core.database import get_db
-from app.core.dependencies import get_current_user
 from app.models.all_models import (
     User, Property, Plot, FarmerProfile, EnvironmentalRecord, SocialIndicatorRecord, DiagnosticReport, Alert
 )
@@ -16,14 +15,13 @@ router = APIRouter(prefix="/diagnostics", tags=["Diagnóstico Socioambiental Hol
 @router.get("/property/{property_id}", response_model=DiagnosticReportResponse)
 def get_property_holistic_diagnostic(
     property_id: int,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    prop = db.query(Property).filter(Property.id == property_id, Property.owner_id == current_user.id).first()
+    prop = db.query(Property).filter(Property.id == property_id).first()
     if not prop:
         raise HTTPException(status_code=404, detail="Propriedade não encontrada.")
 
-    profile = db.query(FarmerProfile).filter(FarmerProfile.user_id == current_user.id).first()
+    profile = None
     
     # 1. Dados Ambientais
     env_records = db.query(EnvironmentalRecord).filter(
@@ -103,10 +101,9 @@ def get_property_holistic_diagnostic(
 @router.get("/alerts/{property_id}", response_model=List[AlertResponse])
 def get_property_alerts(
     property_id: int,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    prop = db.query(Property).filter(Property.id == property_id, Property.owner_id == current_user.id).first()
+    prop = db.query(Property).filter(Property.id == property_id).first()
     if not prop:
         raise HTTPException(status_code=404, detail="Propriedade não encontrada.")
     return db.query(Alert).filter(Alert.property_id == property_id).order_by(Alert.created_at.desc()).all()

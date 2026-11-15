@@ -3,7 +3,6 @@ from sqlalchemy.orm import Session
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta, timezone
 from app.core.database import get_db
-from app.core.dependencies import get_current_user
 from app.models.all_models import User, Property, Plot, EnvironmentalRecord, DataStatus
 from app.schemas.all_schemas import EnvironmentalRecordResponse
 from app.adapters.nasa_power import NasaPowerAdapter
@@ -16,7 +15,6 @@ router = APIRouter(prefix="/environmental", tags=["Dados e Indicadores Ambientai
 async def sync_environmental_data(
     property_id: int,
     days: int = Query(30, ge=7, le=180, description="Dias para sincronização retrospectiva"),
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -26,7 +24,7 @@ async def sync_environmental_data(
     Hargreaves: Modelo biofísico de evapotranspiração ET0 (marcado como ESTIMATED).
     Dados ausentes ou não configurados são gravados como UNAVAILABLE (sem invenção de dados).
     """
-    prop = db.query(Property).filter(Property.id == property_id, Property.owner_id == current_user.id).first()
+    prop = db.query(Property).filter(Property.id == property_id).first()
     if not prop:
         raise HTTPException(status_code=404, detail="Propriedade não encontrada.")
 
@@ -115,10 +113,9 @@ async def sync_environmental_data(
 def get_property_environmental_timeseries(
     property_id: int,
     days: int = Query(30, ge=7, le=365),
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    prop = db.query(Property).filter(Property.id == property_id, Property.owner_id == current_user.id).first()
+    prop = db.query(Property).filter(Property.id == property_id).first()
     if not prop:
         raise HTTPException(status_code=404, detail="Propriedade não encontrada.")
 
