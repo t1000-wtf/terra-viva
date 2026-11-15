@@ -53,7 +53,11 @@ def test_postgresql_connection_and_schema_are_readable():
                             continue
                         if actual["nullable"] != column.nullable:
                             incompatible.append(f"{column.name}:nullability")
-                        if (
+                        actual_enum_values = getattr(actual["type"], "enums", None)
+                        if isinstance(column.type, sa.Enum) and actual_enum_values is not None:
+                            if set(actual_enum_values) != set(column.type.enums):
+                                incompatible.append(f"{column.name}:enum-values")
+                        elif (
                             actual["type"]._type_affinity
                             is not column.type._type_affinity
                         ):
