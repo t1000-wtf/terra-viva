@@ -1,7 +1,5 @@
-import { Routes, Route, Navigate, Outlet } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { AppLayout } from '../components/layout/AppLayout'
-import { useAuth } from '../contexts/AuthContext'
-import { AuthPage } from '../pages/AuthPage'
 
 // Pages
 import DashboardPage from '../pages/dashboard/DashboardPage'
@@ -21,17 +19,9 @@ import AssistantPage from '../pages/assistant/AssistantPage'
 import SourcesPage from '../pages/sources/SourcesPage'
 import HistoryPage from '../pages/history/HistoryPage'
 
-function RequireAuth() {
-  const { isAuthenticated, isLoading } = useAuth()
-  if (isLoading) return <div className="min-h-screen flex items-center justify-center text-slate-500">Carregando sessão…</div>
-  return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />
-}
-
 export function AppRouter() {
   return (
     <Routes>
-      <Route path="/login" element={<AuthPage />} />
-      <Route element={<RequireAuth />}>
       <Route element={<AppLayout />}>
         <Route path="/" element={<DashboardPage />} />
         <Route path="/profile" element={<ProfilePage />} />
@@ -49,7 +39,6 @@ export function AppRouter() {
         <Route path="/diagnostics/:propertyId" element={<DiagnosticsPage />} />
         <Route path="/assistant" element={<AssistantPage />} />
         <Route path="/sources" element={<SourcesPage />} />
-      </Route>
       </Route>
 
       {/* Catch-all route */}

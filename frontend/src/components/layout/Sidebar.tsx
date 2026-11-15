@@ -105,13 +105,15 @@ export function Sidebar({ onClose }: SidebarProps) {
           </div>
         </div>
 
-        <button
-          onClick={logout}
-          className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-600 font-medium hover:bg-red-50 rounded-lg transition-colors"
-        >
-          <LogOut className="w-4 h-4" />
-          <span>Desconectar</span>
-        </button>
+        {user && (
+          <button
+            onClick={logout}
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-600 font-medium hover:bg-red-50 rounded-lg transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Desconectar</span>
+          </button>
+        )}
       </div>
     </aside>
   )
