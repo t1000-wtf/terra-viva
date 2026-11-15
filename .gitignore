@@ -1,27 +1,31 @@
-
-# Variáveis de ambiente
+# Variáveis de ambiente e segredos
 .env
 .env.*
 !.env.example
+**/.env
+**/.env.*
+!**/.env.example
 
-# Ambiente virtual
+# Dependências e builds
+node_modules/
+dist/
+dist-ssr/
 .venv/
 venv/
-
-# Python
 __pycache__/
-*.py[cod]
-*.pyo
+*.pyc
 
-# Banco de dados local
+# Bancos locais
 *.db
+*.sqlite
 *.sqlite3
 
-# Testes e cache
-.pytest_cache/
-.coverage
-htmlcov/
+# Logs e temporários
+*.log
+*.local
 
 # IDE
-.vscode/
 .idea/
+
+# Configurações locais do editor
+.vscode/

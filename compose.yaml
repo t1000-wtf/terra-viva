@@ -1,0 +1,42 @@
+services:
+  database:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: terraviva
+      POSTGRES_USER: terraviva
+      POSTGRES_PASSWORD: terraviva-local
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U terraviva -d terraviva"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg://terraviva:terraviva-local@database:5432/terraviva
+      SECRET_KEY: terraviva-local-development-key-change-before-deployment
+      BACKEND_CORS_ORIGINS: '["http://localhost:5173", "http://127.0.0.1:5173"]'
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      database:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:8000
+    ports:
+      - "127.0.0.1:5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres-data:
