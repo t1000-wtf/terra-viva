@@ -83,6 +83,10 @@ class Property(Base):
     owner = relationship("User", back_populates="properties")
     plots = relationship("Plot", back_populates="property", cascade="all, delete-orphan")
     recommendations = relationship("Recommendation", back_populates="property", cascade="all, delete-orphan")
+    environmental_records = relationship("EnvironmentalRecord", cascade="all, delete-orphan")
+    diagnostic_reports = relationship("DiagnosticReport", cascade="all, delete-orphan")
+    alerts = relationship("Alert", cascade="all, delete-orphan")
+    assistant_chats = relationship("AssistantChat", cascade="all, delete-orphan")
 
 class Plot(Base):
     __tablename__ = "plots"
@@ -201,7 +205,7 @@ class EnvironmentalRecord(Base):
     # Metadados científicos (Proveniência e Confiabilidade)
     source_name = Column(String(100), nullable=False) # Ex: "NASA POWER", "NASA SMAP", "Open-Elevation SRTM"
     product = Column(String(150), nullable=True) # Nome exato do produto/satélite
-    data_status = Column(Enum(DataStatus), default=DataStatus.OBSERVED, nullable=False) # OBSERVED, ESTIMATED, SIMULATED, UNAVAILABLE
+    data_status = Column(Enum(DataStatus), default=DataStatus.OBSERVED, nullable=True) # None means legacy provenance is unknown
     processing_method = Column(String(255), nullable=True) # Método de processamento ou algoritmo aplicado
     spatial_resolution = Column(String(50), nullable=False) # Ex: "0.5 deg", "9 km", "30 m"
     temporal_resolution = Column(String(50), nullable=False) # Ex: "Daily", "Monthly", "Static"

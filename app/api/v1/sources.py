@@ -27,7 +27,7 @@ def list_scientific_sources():
             "resolution": "9 km (EASE-Grid 2.0)",
             "coverage": "Global (revisita a cada 2-3 dias)",
             "access_url": "https://smap.jpl.nasa.gov/",
-            "status": "Ativo / Modelado e Integrado"
+            "status": "Parcial / requer NASA_EARTHDATA_TOKEN e extração validada do pixel"
         },
         {
             "name": "Landsat 8/9 & MODIS (Terra/Aqua)",
@@ -37,7 +37,7 @@ def list_scientific_sources():
             "resolution": "30 m (Landsat) / 250 m (MODIS)",
             "coverage": "Global",
             "access_url": "https://landsat.gsfc.nasa.gov/",
-            "status": "Ativo"
+            "status": "Catálogo consultável; extração de pixel não configurada"
         },
         {
             "name": "NASA ECOSTRESS",
@@ -47,7 +47,7 @@ def list_scientific_sources():
             "resolution": "70 m x 70 m",
             "coverage": "Global",
             "access_url": "https://ecostress.jpl.nasa.gov/",
-            "status": "Ativo"
+            "status": "Não integrada; a ET0 atual é estimada pelo modelo FAO-56"
         },
         {
             "name": "NASA SRTM V3",
@@ -57,7 +57,7 @@ def list_scientific_sources():
             "resolution": "30 metros (1 arc-second)",
             "coverage": "Global",
             "access_url": "https://www2.jpl.nasa.gov/srtm/",
-            "status": "Ativo"
+            "status": "Integrado via Open-Elevation; não usa Google Earth Engine"
         },
         {
             "name": "IBGE (Instituto Brasileiro de Geografia e Estatística)",
@@ -67,7 +67,7 @@ def list_scientific_sources():
             "resolution": "Municipal (5.570 municípios)",
             "coverage": "Brasil",
             "access_url": "https://servicodados.ibge.gov.br/",
-            "status": "Online / API Integrada"
+            "status": "API de localidades integrada; indicadores regionais usam base local de referência"
         },
         {
             "name": "Embrapa (Empresa Brasileira de Pesquisa Agropecuária)",

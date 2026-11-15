@@ -8,7 +8,7 @@ from app.models.all_models import User, Property, AssistantChat, Recommendation
 from app.schemas.all_schemas import ChatMessageRequest, ChatMessageResponse
 from app.services.ai_assistant import AIAssistantService
 
-router = APIRouter(prefix="/assistant", tags=["Assistente de Inteligência Artificial"])
+router = APIRouter(prefix="/assistant", tags=["Assistente Agronômico"])
 
 @router.post("/chat", response_model=ChatMessageResponse)
 async def chat_with_assistant(
@@ -52,7 +52,7 @@ async def chat_with_assistant(
     )
     db.add(user_chat)
 
-    # Chamar serviço de IA
+    # Gerar resposta com as regras determinísticas do assistente
     ai_result = await AIAssistantService.generate_response(
         user_message=request.message,
         chat_history=history,

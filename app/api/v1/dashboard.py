@@ -61,11 +61,11 @@ def get_dashboard_summary(
             for p in plots
         ],
         "environmental_kpis": {
-            "drought_risk": env_summary.get("drought_risk", "MODERADO"),
-            "soil_moisture_m3_m3": env_summary.get("soil_moisture_mean_m3_m3", 0.22),
-            "precipitation_total_mm": env_summary.get("precipitation_total_mm", 0.0),
-            "ndvi_mean": env_summary.get("ndvi_mean", 0.40),
-            "erosion_risk": env_summary.get("erosion_risk", "BAIXO")
+            "drought_risk": env_summary.get("drought_risk", "INDETERMINADO"),
+            "soil_moisture_m3_m3": env_summary.get("soil_moisture_mean_m3_m3"),
+            "precipitation_total_mm": env_summary.get("precipitation_total_mm"),
+            "ndvi_mean": env_summary.get("ndvi_mean"),
+            "erosion_risk": env_summary.get("erosion_risk", "INDETERMINADO")
         },
         "active_alerts_count": len(alerts),
         "alerts": [

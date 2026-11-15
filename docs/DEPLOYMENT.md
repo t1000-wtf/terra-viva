@@ -37,12 +37,47 @@ Crie um arquivo `.env` na raiz do diretório `backend` (ou utilize as variáveis
 ```env
 PROJECT_NAME="TerraViva Backend"
 SECRET_KEY="sua-chave-secreta-jwt-de-producao-com-mais-de-32-caracteres"
-ACCESS_TOKEN_EXPIRE_MINUTES=10080
-DATABASE_URL="sqlite:///./terraviva.db"  # Ou postgresql://user:pass@host:5432/terraviva
-GEMINI_API_KEY=""  # Opcional: Chave da Google AI para o Assistente Gemini 2.5
+ACCESS_TOKEN_EXPIRE_MINUTES=1440
+DATABASE_URL="sqlite:///./terraviva.db"  # Em produção: postgresql+psycopg://user:pass@host:5432/terraviva
+BACKEND_CORS_ORIGINS='["https://seu-frontend.example"]'
 ```
 
-## 4. Docker e Implantação em Nuvem
+No Render, defina `SECRET_KEY` como um valor aleatório persistente, configure `DATABASE_URL` com a URL PostgreSQL interna e informe as origens reais do frontend em `BACKEND_CORS_ORIGINS`. Não use os valores de exemplo em produção.
+
+## 4. PostgreSQL e migrações
+
+O backend usa `psycopg` e aceita URLs PostgreSQL `postgres://`, `postgresql://` ou `postgresql+psycopg://`. O pool valida conexões antes do uso, limita cada processo a cinco conexões persistentes e até cinco conexões excedentes, e aplica timeout de conexão de 10 segundos.
+
+O schema existente do SQLite local foi inspecionado sem escrita: contém as 13 tabelas esperadas, mas faltam `crop_catalog.botanical_family` e `environmental_records.product`, `environmental_records.data_status` e `environmental_records.processing_method`. Os demais tipos, nulabilidade e relacionamentos inspecionados correspondem aos modelos. Registros existentes de `environmental_records` recebem `NULL` em campos de proveniência ainda não conhecidos; a migração não os classifica artificialmente como observados.
+
+O startup não cria nem altera tabelas. Para um banco novo e vazio, aplique as migrações antes de iniciar a aplicação:
+
+```sh
+alembic upgrade head
+```
+
+Para um banco legado existente, **não execute estes passos sem autorização, backup verificado e comparação do schema**. Confirme que ele corresponde integralmente à revisão-base `d3023bc0994e`; então registre essa base sem executar DDL e aplique apenas a revisão aditiva:
+
+```sh
+alembic stamp d3023bc0994e
+alembic upgrade head
+```
+
+`alembic stamp` altera a tabela de controle `alembic_version`, mas não migra o schema. `alembic upgrade head` adiciona somente as quatro colunas ausentes e preserva as linhas existentes. Se qualquer tabela, coluna, tipo, índice ou chave estrangeira divergir da base, interrompa e prepare uma revisão específica antes de atualizar. Downgrade das revisões é bloqueado porque pode remover dados. Nenhuma migração foi executada no banco configurado nesta auditoria.
+
+No Render, configure como **Release Command** `alembic upgrade head` somente após revisar e aprovar a migração e confirmar backup; use como **Start Command** `uvicorn app.main:app --host 0.0.0.0 --port $PORT`. Não coloque a migração no comando de startup. Configure o health check como `/health`.
+
+O teste PostgreSQL, sem escrita, pode ser executado contra um banco de teste já migrado:
+
+```sh
+# PowerShell
+$env:TEST_POSTGRESQL_URL = $env:DATABASE_URL
+pytest -q tests/test_postgresql_integration.py
+```
+
+`TEST_POSTGRESQL_URL` deve apontar para um PostgreSQL de teste cuja schema já esteja migrada. O teste nunca aplica migrações. Sem essa variável, o teste é pulado.
+
+## 5. Docker e Implantação em Nuvem
 
 Para gerar a imagem Docker para ambientes como Railway, Render ou AWS:
 
@@ -54,6 +89,8 @@ WORKDIR /app
 RUN pip install --no-cache-dir uv
 
 COPY pyproject.toml README.md ./
+COPY alembic.ini ./
+COPY alembic/ ./alembic/
 COPY app/ ./app/
 COPY seeds/ ./seeds/
 
@@ -61,5 +98,5 @@ RUN uv pip install --system -e .
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
 ```

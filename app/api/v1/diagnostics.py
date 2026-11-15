@@ -57,8 +57,17 @@ def get_property_holistic_diagnostic(
     }
 
     # C) O que a região oferece?
+    climate_values = []
+    temperature_max_mean = env_analysis.get("temperature_max_mean_c")
+    precipitation_total = env_analysis.get("precipitation_total_mm")
+    if temperature_max_mean is not None:
+        climate_values.append(f"Temperatura máxima média: {temperature_max_mean}°C")
+    if precipitation_total is not None:
+        climate_values.append(f"Precipitação: {precipitation_total} mm")
+    climate_regime = " | ".join(climate_values) if climate_values else "Dados climáticos indisponíveis."
+
     region_offers = {
-        "climate_regime": f"Temperatura média observada: {env_analysis.get('temperature_max_mean_c', 28)}°C | Precipitação: {env_analysis.get('precipitation_total_mm', 0)} mm",
+        "climate_regime": climate_regime,
         "institutional_context": soc_analysis.get("regional_context", {}),
         "natural_potential": "Elevada disponibilidade de radiação solar para rápida fotossíntese de gramíneas C4 e leguminosas tropicais."
     }

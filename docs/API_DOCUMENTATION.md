@@ -71,8 +71,8 @@ A API REST do TerraViva foi desenvolvida com **FastAPI**, **SQLAlchemy** e supor
   - **O que a região oferece?** (Radiação, histórico pluviométrico, mercados e cooperativas).
 - `GET /alerts/{property_id}`: Consulta alertas automáticos de estiagem ou estresse vegetal emitidos com base nos satélites.
 
-### 13. Assistente de Inteligência Artificial (`/api/v1/assistant`)
-- `POST /chat`: Assistente explicativo contextualizado que traduz os indicadores científicos e recomendações em linguagem acessível ao agricultor brasileiro. Conecta ao Gemini (`gemini-2.5-flash`) ou executa o motor especialista agronômico de contingência integrado.
+### 13. Assistente Agronômico (`/api/v1/assistant`)
+- `POST /chat`: Respostas determinísticas baseadas nas regras de conhecimento agronômico já integradas ao backend; não consulta serviços externos de IA.
 - `GET /history`: Histórico de interações com o assistente.
 
 ### 14. Fontes e Proveniência Científica (`/api/v1/sources`)

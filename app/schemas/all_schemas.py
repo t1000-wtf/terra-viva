@@ -192,7 +192,7 @@ class EnvironmentalRecordCreate(BaseModel):
     slope_deg: Optional[float] = None
     source_name: str
     product: Optional[str] = None
-    data_status: DataStatus = DataStatus.OBSERVED
+    data_status: Optional[DataStatus] = DataStatus.OBSERVED
     processing_method: Optional[str] = None
     spatial_resolution: str
     temporal_resolution: str

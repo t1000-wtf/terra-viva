@@ -2,6 +2,7 @@ import httpx
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any, Optional
+from app.core.config import settings
 
 logger = logging.getLogger("terraviva.adapters.nasa_power")
 
@@ -17,7 +18,7 @@ class NasaPowerAdapter:
     - Diferencia dados ausentes (None) de valores meteorológicos iguais a zero (ex: 0.0 mm de chuva).
     - Preserva proveniência, produto e parâmetros solicitados.
     """
-    BASE_URL = "https://power.larc.nasa.gov/api/temporal/daily/point"
+    BASE_URL = settings.NASA_POWER_BASE_URL
 
     @classmethod
     async def fetch_climate_data(

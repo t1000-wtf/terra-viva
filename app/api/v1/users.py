@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
-from app.models.all_models import User, FarmerProfile
+from app.models.all_models import User, UserRole, FarmerProfile
 from app.schemas.all_schemas import (
     UserResponse, UserUpdate, FarmerProfileResponse, FarmerProfileCreate
 )
@@ -19,6 +19,11 @@ def update_user_profile(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    if user_in.role is not None and current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Somente um administrador pode alterar papéis de usuário."
+        )
     if user_in.name is not None:
         current_user.name = user_in.name
     if user_in.phone is not None:

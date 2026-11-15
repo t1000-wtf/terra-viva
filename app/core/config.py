@@ -21,13 +21,14 @@ class Settings(BaseSettings):
     # CORS (específico por padrão)
     BACKEND_CORS_ORIGINS: List[str] = [
         "http://localhost:3000",
+        "http://localhost:5173",
         "http://localhost:8000",
         "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173",
         "http://127.0.0.1:8000"
     ]
     
     # APIs Externas
-    GEMINI_API_KEY: Optional[str] = None
     NASA_EARTHDATA_TOKEN: Optional[str] = None
     IBGE_API_BASE_URL: str = "https://servicodados.ibge.gov.br/api/v1"
     IBGE_AGREGADOS_BASE_URL: str = "https://servicodados.ibge.gov.br/api/v3/agregados"

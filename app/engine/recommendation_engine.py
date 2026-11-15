@@ -86,7 +86,12 @@ class RecommendationEngine:
         # ----------------------------------------------------
         hist_crops = [h.crop_name for h in plot.crop_histories] if plot.crop_histories else []
         current_names = hist_crops if hist_crops else ([plot.current_crop] if plot.current_crop else [])
-        selected_a = [crops_by_name.get(name.lower()) for name in current_names if name.lower() in crops_by_name]
+        selected_a = [
+            crops_by_name[name.lower()]
+            for name in current_names
+            if name.lower() in crops_by_name
+            and crops_by_name[name.lower()].estimated_cost_per_ha_brl is not None
+        ]
         
         if selected_a:
             strat_a = cls._evaluate_strategy(
@@ -106,8 +111,12 @@ class RecommendationEngine:
         else:
             strategies.append({
                 "strategy_type": "current",
-                "strategy_title": "Estratégia A — Histórico Não Cadastrado",
-                "strategy_description": "Sem histórico de safras cadastradas para este talhão.",
+                "strategy_title": "Estratégia A — Linha de Base Indisponível",
+                "strategy_description": (
+                    "Sem histórico de safras cadastrado para este talhão."
+                    if not current_names
+                    else "O histórico informado não possui cultura correspondente com custo de referência cadastrado."
+                ),
                 "crop_sequence": [],
                 "duration_months": 12,
                 "score_environmental": 40.0,
@@ -236,6 +245,13 @@ class RecommendationEngine:
         if period_days < cls.MIN_SERIE_DAYS_REQUIRED:
             return False, f"Série meteorológica disponível de apenas {period_days} dias. O TerraViva exige no mínimo {cls.MIN_SERIE_DAYS_REQUIRED} dias de observações agrometeorológicas para validação de sazonalidade e risco de estiagem."
 
+        quality = env_analysis.get("data_quality_metrics", {})
+        observed_days = quality.get("observed_climate_records_count")
+        if observed_days is None:
+            observed_days = round(period_days * quality.get("observed_records_ratio", 0.0))
+        if observed_days < cls.MIN_SERIE_DAYS_REQUIRED:
+            return False, f"A série contém apenas {observed_days} dias com temperatura e precipitação observadas. O TerraViva exige no mínimo {cls.MIN_SERIE_DAYS_REQUIRED} dias."
+
         return True, None
 
     @classmethod
@@ -259,6 +275,9 @@ class RecommendationEngine:
             if plot.ph < (crop.ideal_ph_min - 0.4) or plot.ph > (crop.ideal_ph_max + 0.6):
                 return False, f"pH do solo ({plot.ph}) fora da faixa de tolerância da cultura ({crop.ideal_ph_min}-{crop.ideal_ph_max})."
 
+        if crop.estimated_cost_per_ha_brl is None:
+            return False, f"Custo por hectare não cadastrado para {crop.common_name}; análise econômica indisponível."
+
         # 3. Regime Hídrico e Risco de Seca
         drought_risk = env_analysis.get("drought_risk", "BAIXO")
         has_irrigation = bool(farmer_profile.has_irrigation) if farmer_profile else False
@@ -275,7 +294,7 @@ class RecommendationEngine:
         # 5. Restrição Orçamentária
         if farmer_profile:
             has_credit = bool(farmer_profile.rural_credit_access)
-            cost_ha = crop.estimated_cost_per_ha_brl or 3000.0
+            cost_ha = crop.estimated_cost_per_ha_brl
             # Se custo por hectare for muito alto (> R$ 4.000) e não há crédito rural nem trator
             if cost_ha > 4000.0 and not has_credit and farmer_profile.agriculture_type.value == "familiar":
                 return False, f"Custo de implantação elevado (R$ {cost_ha}/ha) incompatível com ausência de crédito rural declarado."
@@ -390,9 +409,9 @@ class RecommendationEngine:
 
         # 3. Dimensão Econômica
         econ_analysis = EconomicAnalysisEngine.evaluate_crop_sequence_economy(crops, plot.area_ha, farmer_profile)
-        total_seq_cost = econ_analysis.get("cost_per_ha_brl", 3000.0)
+        total_seq_cost = econ_analysis["cost_per_ha_brl"]
         # Custo médio ponderado por cultura individual da sequência
-        avg_cost_ha = total_seq_cost / len(crops) if crops else 2500.0
+        avg_cost_ha = total_seq_cost / len(crops)
         has_credit = bool(farmer_profile.rural_credit_access) if farmer_profile else False
 
         score_econ = 60.0

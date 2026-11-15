@@ -48,19 +48,22 @@ class EnvironmentalAnalysisEngine:
             calc_confidence = "Baixa"
 
         # 1. Indicadores Pluviométricos
-        total_precip_mm = sum(precip_series) if precip_series else 0.0
-        consecutive_dry_days = cls._calculate_consecutive_dry_days(records)
+        total_precip_mm = sum(precip_series) if precip_series else None
+        consecutive_dry_days = cls._calculate_consecutive_dry_days(records) if precip_series else None
         
         # 2. Indicadores Térmicos
-        mean_tmean = float(np.mean(temp_mean_series)) if temp_mean_series else 25.0
-        mean_tmax = float(np.mean(temp_max_series)) if temp_max_series else 29.0
-        heat_stress_days = sum(1 for t in temp_max_series if t >= 34.0)
+        mean_tmean = float(np.mean(temp_mean_series)) if temp_mean_series else None
+        mean_tmax = float(np.mean(temp_max_series)) if temp_max_series else None
+        heat_stress_days = sum(1 for t in temp_max_series if t >= 34.0) if temp_max_series else None
 
         # 3. Análise de Risco de Seca
-        if consecutive_dry_days > 25:
+        if not precip_series and not anomaly_series:
+            drought_risk = "INDETERMINADO"
+            drought_desc = "Dados de precipitação e anomalia de umidade insuficientes para avaliar o risco de seca."
+        elif consecutive_dry_days is not None and consecutive_dry_days > 25:
             drought_risk = "ALTO"
             drought_desc = "Período crítico de estiagem (>25 dias secos consecutivos). Risco hídrico severo."
-        elif consecutive_dry_days > 14 or (anomaly_series and float(np.mean(anomaly_series)) < -0.8):
+        elif (consecutive_dry_days is not None and consecutive_dry_days > 14) or (anomaly_series and float(np.mean(anomaly_series)) < -0.8):
             drought_risk = "MODERADO"
             drought_desc = "Estiagem moderada observada. Recomenda-se cautela no plantio de culturas exigentes."
         else:
@@ -71,15 +74,18 @@ class EnvironmentalAnalysisEngine:
         if ndvi_series:
             mean_ndvi = float(np.mean(ndvi_series))
             bare_soil_days = sum(1 for n in ndvi_series if n < 0.25)
-            bare_soil_risk = bare_soil_days > (len(records) * 0.25)
+            bare_soil_risk = bare_soil_days > (len(ndvi_series) * 0.25)
         else:
             mean_ndvi = None
-            bare_soil_days = 0
-            bare_soil_risk = False
+            bare_soil_days = None
+            bare_soil_risk = None
 
         # 5. Risco de Erosão
-        slope = plot.slope_pct if (plot and plot.slope_pct is not None) else 3.5
-        if slope > 12.0 and bare_soil_risk:
+        slope = plot.slope_pct if (plot and plot.slope_pct is not None) else None
+        if slope is None or bare_soil_risk is None:
+            erosion_risk = "INDETERMINADO"
+            erosion_desc = "Dados de declividade e cobertura vegetal insuficientes para avaliar o risco de erosão."
+        elif slope > 12.0 and bare_soil_risk:
             erosion_risk = "ALTO"
             erosion_desc = "Declividade forte combinada com solo descoberto. Alto risco de perda de solo por erosão."
         elif slope > 6.0:
@@ -90,17 +96,23 @@ class EnvironmentalAnalysisEngine:
             erosion_desc = "Relevo suave-ondulado a plano. Risco reduzido de processos erosivos intensos."
 
         # 6. Balanço Hídrico Climatológico
-        total_et = sum(et_series) if et_series else (len(records) * 3.5)
-        water_balance_mm = total_precip_mm - total_et
+        total_et = sum(et_series) if et_series else None
+        water_balance_mm = total_precip_mm - total_et if total_precip_mm is not None and total_et is not None else None
+        observed_climate_records = sum(
+            1 for r in records
+            if (r.data_status == DataStatus.OBSERVED or str(r.data_status) in {"DataStatus.OBSERVED", "OBSERVED"})
+            and r.temperature_mean_c is not None
+            and r.precipitation_mm is not None
+        )
 
         return {
             "period_days": len(records),
-            "precipitation_total_mm": round(total_precip_mm, 1),
+            "precipitation_total_mm": round(total_precip_mm, 1) if total_precip_mm is not None else None,
             "consecutive_dry_days": consecutive_dry_days,
             "drought_risk": drought_risk,
             "drought_description": drought_desc,
-            "temperature_mean_c": round(mean_tmean, 1),
-            "temperature_max_mean_c": round(mean_tmax, 1),
+            "temperature_mean_c": round(mean_tmean, 1) if mean_tmean is not None else None,
+            "temperature_max_mean_c": round(mean_tmax, 1) if mean_tmax is not None else None,
             "heat_stress_days_count": heat_stress_days,
             "soil_moisture_mean_m3_m3": round(float(np.mean(moisture_series)), 3) if moisture_series else None,
             "soil_moisture_anomaly_mean": round(float(np.mean(anomaly_series)), 2) if anomaly_series else None,
@@ -108,10 +120,11 @@ class EnvironmentalAnalysisEngine:
             "bare_soil_days_count": bare_soil_days,
             "erosion_risk": erosion_risk,
             "erosion_description": erosion_desc,
-            "water_balance_mm": round(water_balance_mm, 1),
+            "water_balance_mm": round(water_balance_mm, 1) if water_balance_mm is not None else None,
             "data_quality_metrics": {
                 "total_records": len(records),
                 "observed_records_ratio": round(ratio_observed, 2),
+                "observed_climate_records_count": observed_climate_records,
                 "is_mostly_observed": ratio_observed >= 0.5
             },
             "scientific_sources": [

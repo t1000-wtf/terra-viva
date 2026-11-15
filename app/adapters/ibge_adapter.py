@@ -1,6 +1,7 @@
 import httpx
 import logging
 from typing import Optional, Dict, Any, List
+from app.core.config import settings
 
 logger = logging.getLogger("terraviva.adapters.ibge")
 
@@ -10,8 +11,8 @@ class IbgeAdapter:
     - API de Localidades (Municípios, Microrregiões, Estados)
     - API de Agregados / SIDRA (Censo Demográfico e Agropecuário)
     """
-    BASE_URL = "https://servicodados.ibge.gov.br/api/v1/localidades"
-    AGREGADOS_URL = "https://servicodados.ibge.gov.br/api/v3/agregados"
+    BASE_URL = f"{settings.IBGE_API_BASE_URL}/localidades"
+    AGREGADOS_URL = settings.IBGE_AGREGADOS_BASE_URL
 
     @classmethod
     async def get_municipality_by_coords(

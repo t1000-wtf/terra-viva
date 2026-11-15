@@ -70,6 +70,13 @@ class SocialAnalysisEngine:
                 "source": regional_social.source_name
             }
 
+        if regional_social:
+            confidence_level = "Alta (Perfil declarado pelo usuário + referência regional disponível)"
+        elif farmer_profile:
+            confidence_level = "Moderada (Perfil declarado; dados regionais indisponíveis)"
+        else:
+            confidence_level = "Baixa (Perfil do agricultor e dados regionais indisponíveis)"
+
         return {
             "agriculture_type": "Familiar" if is_family_farm else "Empresarial/Mista",
             "labor_availability": labor,
@@ -80,5 +87,5 @@ class SocialAnalysisEngine:
             "constraints": constraints,
             "farmer_needs": needs,
             "regional_context": municipality_summary,
-            "confidence_level": "Alta (Dados declarados pelo usuário + IBGE Oficial)"
+            "confidence_level": confidence_level
         }

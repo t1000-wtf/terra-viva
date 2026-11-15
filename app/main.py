@@ -1,7 +1,7 @@
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.core.database import Base, engine
 from app.api.v1 import (
     auth, users, properties, plots, crops, history, priorities,
     environmental, social, economic, recommendations, diagnostics,
@@ -10,15 +10,15 @@ from app.api.v1 import (
 from app.seeds.seed_data import seed_database
 from app.core.database import SessionLocal
 
-# Criar tabelas no banco de dados
-Base.metadata.create_all(bind=engine)
+logger = logging.getLogger("terraviva")
 
-# Povoar catálogo inicial se necessário
+# Aplique as migrações Alembic antes de iniciar a aplicação.
 try:
     with SessionLocal() as db:
         seed_database(db)
 except Exception:
-    pass
+    logger.exception("Falha ao carregar o catálogo e os dados de referência iniciais.")
+    raise
 
 app = FastAPI(
     title=settings.PROJECT_NAME,

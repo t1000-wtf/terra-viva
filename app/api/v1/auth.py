@@ -3,13 +3,19 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import verify_password, get_password_hash, create_access_token
 from app.core.dependencies import get_current_user
-from app.models.all_models import User, FarmerProfile, UserPriority
+from app.models.all_models import User, FarmerProfile, UserPriority, UserRole
 from app.schemas.all_schemas import UserCreate, UserLogin, Token, UserResponse
 
 router = APIRouter(prefix="/auth", tags=["Autenticação"])
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def register(user_in: UserCreate, db: Session = Depends(get_db)):
+    if user_in.role != UserRole.FARMER:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="O perfil inicial deve ser de agricultor. Papéis elevados são atribuídos por administradores."
+        )
+
     existing = db.query(User).filter(User.email == user_in.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Este e-mail já está cadastrado no sistema.")

@@ -1,11 +1,18 @@
 import pytest
 from datetime import datetime, timezone, timedelta
 from unittest.mock import AsyncMock, patch, MagicMock
-from app.models.all_models import Plot, FarmerProfile, UserPriority, CropCatalog, DataStatus
+from app.models.all_models import (
+    Plot, FarmerProfile, UserPriority, CropCatalog, DataStatus,
+    EnvironmentalRecord
+)
 from app.adapters.nasa_power import NasaPowerAdapter
+from app.adapters.ibge_adapter import IbgeAdapter
 from app.adapters.remote_sensing import RemoteSensingAdapter
+from app.core.database import _normalize_database_url
 from app.core.geoprocessing import GeoProcessingService
 from app.core.security import get_password_hash, verify_password
+from app.engine.environmental_engine import EnvironmentalAnalysisEngine
+from app.engine.economic_engine import EconomicAnalysisEngine
 from app.engine.recommendation_engine import RecommendationEngine
 from fastapi import HTTPException
 
@@ -55,6 +62,138 @@ async def test_nasa_power_handles_invalid_payload_without_synthesizing():
         assert len(records) == 1
         assert records[0]["data_status"] == "UNAVAILABLE"
         assert records[0]["temperature_mean_c"] is None
+
+@pytest.mark.asyncio
+async def test_nasa_power_requests_configured_daily_parameters_and_parses_observed_values():
+    response = MagicMock()
+    response.status_code = 200
+    response.json.return_value = {
+        "properties": {
+            "parameter": {
+                "T2M": {"20250101": 21.5},
+                "T2M_MAX": {"20250101": 28.0},
+                "T2M_MIN": {"20250101": 17.0},
+                "PRECTOTCORR": {"20250101": 0.0},
+                "ALLSKY_SFC_SW_DWN": {"20250101": 18.2},
+                "RH2M": {"20250101": 65.0}
+            }
+        }
+    }
+
+    with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+        mock_get.return_value = response
+        records = await NasaPowerAdapter.fetch_climate_data(
+            latitude=-16.7,
+            longitude=-43.8,
+            start_date=datetime(2025, 1, 1),
+            end_date=datetime(2025, 1, 1)
+        )
+
+    params = mock_get.await_args.kwargs["params"]
+    assert params == {
+        "parameters": "T2M,T2M_MAX,T2M_MIN,PRECTOTCORR,ALLSKY_SFC_SW_DWN,RH2M",
+        "community": "AG",
+        "longitude": "-43.8000",
+        "latitude": "-16.7000",
+        "start": "20250101",
+        "end": "20250101",
+        "format": "JSON"
+    }
+    assert len(records) == 1
+    assert records[0]["data_status"] == "OBSERVED"
+    assert records[0]["temperature_mean_c"] == 21.5
+    assert records[0]["precipitation_mm"] == 0.0
+
+@pytest.mark.asyncio
+async def test_ibge_empty_and_unavailable_responses_do_not_invent_municipality_data():
+    empty_response = MagicMock(status_code=200)
+    empty_response.json.return_value = []
+    unavailable_response = MagicMock(status_code=503)
+
+    with patch("httpx.AsyncClient.get", side_effect=[empty_response, unavailable_response]):
+        assert await IbgeAdapter.get_municipality_info("Cidade inexistente", "MG") is None
+        assert await IbgeAdapter.get_municipality_info("Montes Claros", "MG") is None
+
+    sidra_response = MagicMock(status_code=503)
+    with patch("httpx.AsyncClient.get", return_value=sidra_response):
+        indicators = await IbgeAdapter.fetch_municipal_indicators("1234567")
+    assert indicators["ibge_code"] == "1234567"
+    assert "estimated_population" not in indicators
+
+def test_postgresql_urls_use_the_declared_psycopg_driver():
+    assert _normalize_database_url("postgres://u:p@localhost/db") == "postgresql+psycopg://u:p@localhost/db"
+    assert _normalize_database_url("postgresql://u:p@localhost/db") == "postgresql+psycopg://u:p@localhost/db"
+    assert _normalize_database_url("sqlite:///./test.db") == "sqlite:///./test.db"
+
+def test_missing_environmental_observations_do_not_create_indicators_or_recommendations():
+    records = [
+        EnvironmentalRecord(
+            property_id=1,
+            observation_date=datetime(2025, 1, day),
+            source_name="NASA POWER",
+            data_status=DataStatus.UNAVAILABLE,
+            spatial_resolution="0.5 degrees",
+            temporal_resolution="Daily"
+        )
+        for day in (1, 2, 3)
+    ]
+    analysis = EnvironmentalAnalysisEngine.analyze_environmental_conditions(records)
+    assert analysis["drought_risk"] == "INDETERMINADO"
+    assert analysis["precipitation_total_mm"] is None
+    assert analysis["temperature_mean_c"] is None
+    assert analysis["data_quality_metrics"]["observed_climate_records_count"] == 0
+
+    plot = Plot(id=1, name="Talhão sem observações", area_ha=3.0, current_crop="Milho")
+    crop = CropCatalog(
+        id=1, common_name="Milho", scientific_name="Zea mays", category="Graos",
+        cycle_days=120, water_requirement_mm=500.0, drought_tolerance="Media",
+        heat_tolerance="Media", rooting_depth_cm=60.0, erosion_protection="Media",
+        organic_matter_contribution="Media", estimated_cost_per_ha_brl=2500.0,
+        ideal_temp_min_c=18.0, ideal_temp_max_c=32.0, ideal_ph_min=5.0, ideal_ph_max=7.0
+    )
+    strategies = RecommendationEngine.generate_strategies(
+        plot=plot,
+        farmer_profile=None,
+        user_priority=None,
+        env_analysis=analysis,
+        catalog_crops=[crop]
+    )
+    assert len(strategies) == 1
+    assert strategies[0]["strategy_type"] == "insufficient_data"
+
+def test_unknown_crop_cost_and_market_liquidity_remain_indeterminate():
+    crop = CropCatalog(
+        id=1, common_name="Cultura sem referência", scientific_name="Crop sp.",
+        category="Graos", cycle_days=100, water_requirement_mm=400.0,
+        drought_tolerance="Media", heat_tolerance="Media", rooting_depth_cm=40.0,
+        erosion_protection="Media", organic_matter_contribution="Media",
+        estimated_cost_per_ha_brl=None, market_liquidity=None,
+        ideal_temp_min_c=18.0, ideal_temp_max_c=32.0,
+        ideal_ph_min=5.0, ideal_ph_max=7.0
+    )
+    economics = EconomicAnalysisEngine.evaluate_crop_sequence_economy(
+        crops=[crop], area_ha=2.0, farmer_profile=None
+    )
+    assert economics["cost_per_ha_brl"] is None
+    assert economics["estimated_total_investment_brl"] is None
+    assert economics["market_liquidity_general"] == "Indeterminada"
+
+    plot = Plot(id=1, name="Talhão histórico", area_ha=2.0, current_crop=crop.common_name)
+    strategies = RecommendationEngine.generate_strategies(
+        plot=plot,
+        farmer_profile=None,
+        user_priority=None,
+        env_analysis={
+            "period_days": 30,
+            "temperature_mean_c": 25.0,
+            "drought_risk": "BAIXO",
+            "data_quality_metrics": {"observed_records_ratio": 1.0}
+        },
+        catalog_crops=[crop]
+    )
+    baseline = next(strategy for strategy in strategies if strategy["strategy_type"] == "current")
+    assert baseline["crop_sequence"] == []
+    assert "custo de referência cadastrado" in baseline["strategy_description"]
 
 # -------------------------------------------------------------
 # 2. NASA SMAP: Extração Real vs Granulado Não Extraído

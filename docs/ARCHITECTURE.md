@@ -8,7 +8,7 @@ O **TerraViva** é uma plataforma inovadora de inteligência socioambiental e ag
 ## 2. Decisões Técnicas e Justificativas
 
 ### 2.1 Linguagem: Python 3.11+
-- **Justificativa**: Python é a linguagem líder incontestável no ecossistema científico, de dados geoespaciais e inteligência artificial. Bibliotecas como `shapely`, `numpy`, conectores com APIs da NASA e SDKs modernos de IA (`google-genai`) integram-se de forma nativa e de alta performance.
+- **Justificativa**: Python oferece suporte ao ecossistema científico e de dados geoespaciais. Bibliotecas como `shapely`, `numpy` e conectores com APIs da NASA integram-se de forma nativa e de alta performance.
 
 ### 2.2 Framework Web: FastAPI (Asíncrono)
 - **Justificativa**: 
@@ -29,7 +29,7 @@ O **TerraViva** é uma plataforma inovadora de inteligência socioambiental e ag
   - `schemas/`: DTOs de entrada e saída validados por Pydantic.
   - `adapters/`: Conectores isolados para serviços externos (NASA POWER, SMAP, Landsat/MODIS, ECOSTRESS, SRTM, IBGE, INMET).
   - `engine/`: Motores de cálculo científico puro (Ambiental, Social, Econômico, Multicritério e Explicabilidade).
-  - `services/`: Serviços orquestradores (ex: Assistente de Inteligência Artificial Gemini).
+  - `services/`: Serviços orquestradores, incluindo o assistente agronômico determinístico.
   - `api/v1/`: Controladores REST desacoplados por recurso.
 
 ---
@@ -63,8 +63,5 @@ Onde $W_{\text{amb}} + W_{\text{soc}} + W_{\text{econ}} = 100\%$ (configurável 
 
 ---
 
-## 5. Assistente de IA e Explicabilidade
-O assistente foi desenhado com base em princípios rigorosos de confiabilidade científica:
-- Não gera alucinações sobre dados inexistentes de satélite.
-- Traduz termos técnicos agronômicos para o linguajar acolhedor e claro do homem do campo brasileiro.
-- Ressalta que o TerraViva apoia a decisão com evidências transparentes, incentivando o acompanhamento por assistência técnica de campo.
+## 5. Assistente Agronômico e Explicabilidade
+O assistente utiliza respostas determinísticas baseadas em regras de conhecimento agronômico integradas ao backend. Não depende de um serviço externo de IA; diagnósticos e recomendações continuam sendo calculados por seus próprios módulos.

@@ -20,17 +20,16 @@ RUN pip install --no-cache-dir uv
 
 # Copiar arquivos de dependências
 COPY pyproject.toml README.md ./
-
-# Instalar dependências Python
-RUN uv pip install --system -e .
+COPY alembic.ini ./
+COPY alembic/ ./alembic/
 
 # Copiar aplicação
 COPY app/ ./app/
 COPY seeds/ ./seeds/
 
+# Instalar dependências Python
+RUN uv pip install --system -e .
+
 EXPOSE 8000
 
 CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
-
-COPY pyproject.toml README.md ./
-RUN uv pip install --system -e .

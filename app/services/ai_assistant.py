@@ -1,34 +1,15 @@
-import os
 from typing import List, Dict, Any, Optional
 from datetime import datetime
-from app.core.config import settings
 
 class AIAssistantService:
     """
-    Camada desacoplada do Assistente de Inteligência Artificial do TerraViva.
-    Utiliza Google GenAI SDK (Gemini) quando configurado via GEMINI_API_KEY.
-    Possui modo explicativo determinístico especializado em agricultura brasileira caso a chave não esteja definida.
+    Assistente determinístico especializado em agricultura brasileira.
     
     Diretrizes éticas:
     - Nunca inventar medições ou dados da NASA.
     - Jamais prometer lucros milagrosos ou produtividade irreal.
     - Reconhecer incertezas e ressaltar que a ferramenta apoia a decisão, não substituindo agrônomo de campo.
     """
-
-    SYSTEM_PROMPT = """Você é o Assistente Especialista da plataforma TerraViva.
-Sua missão é explicar, em português brasileiro claro, acolhedor e acessível para agricultores:
-- O diagnóstico socioambiental da propriedade.
-- O que a terra precisa, o que o agricultor precisa e o que a região oferece.
-- Como interpretar as estratégias de rotação recomendadas (Atual, Sustentável e Resiliente ao Clima).
-- O significado das observações da NASA (chuva GPM, umidade do solo SMAP, temperatura POWER, vegetação Landsat/MODIS).
-- As limitações, riscos e fontes técnicas oficiais (Embrapa, IBGE, INMET, CONAB).
-
-Regras inegociáveis:
-1. Nunca invente dados científicos, preços ou produtividades garantidas.
-2. Seja transparente sobre as limitações dos dados de satélite (resolução regional).
-3. Sempre recomende a validação prática no campo com assistência técnica agronômica.
-4. Mantenha tom respeitoso, encorajador e focado no bem-estar socioeconômico da família agrícola.
-"""
 
     @classmethod
     async def generate_response(
@@ -37,34 +18,8 @@ Regras inegociáveis:
         chat_history: List[Dict[str, str]],
         context_data: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        api_key = settings.GEMINI_API_KEY or os.environ.get("GEMINI_API_KEY")
-        
-        # Montar contexto enriquecido
-        context_text = ""
         sources = ["Motor de Recomendação TerraViva", "Embrapa", "NASA Earth Science Data", "IBGE"]
-        if context_data:
-            context_text = f"\n[Contexto Atual da Propriedade e Análises]:\n{context_data}\n"
 
-        if api_key:
-            try:
-                from google import genai
-                client = genai.Client(api_key=api_key)
-                
-                full_prompt = f"{cls.SYSTEM_PROMPT}\n{context_text}\nPergunta do Agricultor: {user_message}"
-                response = client.models.generate_content(
-                    model="gemini-2.5-flash",
-                    contents=full_prompt,
-                )
-                return {
-                    "reply": response.text,
-                    "context_sources": sources,
-                    "timestamp": datetime.utcnow()
-                }
-            except Exception as e:
-                # Fallback em caso de indisponibilidade da API externa
-                pass
-
-        # Assistente Especialista Integrado (Base de Conhecimento Agronômico)
         reply = cls._generate_knowledge_response(user_message, context_data)
         return {
             "reply": reply,

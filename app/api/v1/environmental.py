@@ -144,7 +144,11 @@ def get_property_environmental_timeseries(
                 "soil_moisture": r.soil_moisture_m3_m3,
                 "ndvi": r.ndvi,
                 "evapotranspiration": r.evapotranspiration_mm,
-                "data_status": r.data_status.value if hasattr(r.data_status, "value") else str(r.data_status),
+                "data_status": (
+                    r.data_status.value if hasattr(r.data_status, "value")
+                    else str(r.data_status) if r.data_status is not None
+                    else None
+                ),
                 "confidence_level": r.confidence_level
             }
             for r in records

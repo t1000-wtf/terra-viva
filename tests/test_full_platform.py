@@ -1,6 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from app.main import app
@@ -59,6 +59,24 @@ def test_root_and_sources():
     res = client.get("/")
     assert res.status_code == 200
     assert res.json()["status"] == "online"
+    assert client.get("/health").json() == {"status": "healthy"}
+    openapi = client.get("/api/v1/openapi.json")
+    assert openapi.status_code == 200
+    expected_routes = {
+        "/api/v1/auth/login",
+        "/api/v1/properties",
+        "/api/v1/properties/{property_id}/plots",
+        "/api/v1/plots/{plot_id}/history",
+        "/api/v1/environmental/sync/{property_id}",
+        "/api/v1/social/diagnostics/{property_id}",
+        "/api/v1/economic/estimate",
+        "/api/v1/recommendations/generate/{plot_id}",
+        "/api/v1/diagnostics/property/{property_id}",
+        "/api/v1/assistant/chat",
+        "/api/v1/assistant/history",
+        "/api/v1/dashboard/summary/{property_id}"
+    }
+    assert expected_routes.issubset(openapi.json()["paths"])
 
     # Listar fontes científicas
     sources_res = client.get("/api/v1/sources")
@@ -67,6 +85,32 @@ def test_root_and_sources():
     assert len(sources) >= 5
     assert any("NASA" in s["name"] for s in sources)
     assert any("Embrapa" in s["name"] for s in sources)
+
+def test_test_database_connection_and_seeded_catalog():
+    with TestingSessionLocal() as db:
+        assert db.execute(text("SELECT 1")).scalar_one() == 1
+        assert db.query(CropCatalog).count() >= 8
+
+def test_registration_and_profile_cannot_escalate_user_role(auth_headers):
+    registration = client.post("/api/v1/auth/register", json={
+        "name": "Tentativa de Administrador",
+        "email": "role-escalation@example.com",
+        "password": "SenhaSegura123!",
+        "role": "administrador"
+    })
+    assert registration.status_code == 403
+
+    profile_update = client.put(
+        "/api/v1/users/profile",
+        headers=auth_headers,
+        json={"role": "administrador"}
+    )
+    assert profile_update.status_code == 403
+    current_user = client.get("/api/v1/auth/me", headers=auth_headers)
+    assert current_user.status_code == 200
+    assert current_user.json()["role"] == "agricultor"
+
+    assert client.get("/api/v1/users/profile").status_code == 401
 
 def test_crop_catalog():
     res = client.get("/api/v1/crops")
@@ -140,11 +184,12 @@ def test_property_and_plots_flow(auth_headers):
     recs_res = client.post(f"/api/v1/recommendations/generate/{plot_id}", headers=auth_headers)
     assert recs_res.status_code == 200
     recs = recs_res.json()
-    assert len(recs) == 3
     strat_types = [r["strategy_type"] for r in recs]
-    assert "current" in strat_types
-    assert "sustainable" in strat_types
-    assert "resilient" in strat_types
+    if len(recs) == 1:
+        assert strat_types == ["insufficient_data"]
+        assert "Dados Insuficientes" in recs[0]["strategy_title"]
+    else:
+        assert set(strat_types) == {"current", "sustainable", "resilient"}
 
     # Cada recomendação possui pontuações transparentes
     for r in recs:
@@ -152,7 +197,8 @@ def test_property_and_plots_flow(auth_headers):
         assert 0 <= r["score_social"] <= 100
         assert 0 <= r["score_economic"] <= 100
         assert 0 <= r["score_overall"] <= 100
-        assert len(r["potential_benefits"]) > 0
+        if r["strategy_type"] != "insufficient_data":
+            assert len(r["potential_benefits"]) > 0
         assert len(r["risks"]) > 0
         assert len(r["sources_cited"]) > 0
 
@@ -164,7 +210,39 @@ def test_property_and_plots_flow(auth_headers):
     assert "farmer_needs" in diag
     assert "region_offers" in diag
 
-    # 7. Conversar com o Assistente de IA
+    # 7. Validar indicadores sociais e econômicos
+    social_res = client.get(f"/api/v1/social/diagnostics/{prop_id}", headers=auth_headers)
+    assert social_res.status_code == 200
+    assert social_res.json()["social_analysis"]
+
+    economic_res = client.get(
+        "/api/v1/economic/estimate",
+        params={"crop_names": "Milho,Sorgo", "area_ha": 8.5},
+        headers=auth_headers
+    )
+    assert economic_res.status_code == 200
+    economics = economic_res.json()
+    assert len(economics["crops_breakdown"]) == 2
+    assert economics["cost_per_ha_brl"] is not None
+
+    history_res = client.post(
+        f"/api/v1/plots/{plot_id}/history",
+        headers=auth_headers,
+        json={
+            "crop_name": "Milho",
+            "planting_date": "2024-10-01T00:00:00",
+            "harvest_date": "2025-02-01T00:00:00",
+            "season_name": "Safra 2024/2025",
+            "productivity_kg_ha": 5000.0
+        }
+    )
+    assert history_res.status_code == 201
+    saved_history = client.get(f"/api/v1/plots/{plot_id}/history", headers=auth_headers)
+    assert saved_history.status_code == 200
+    assert len(saved_history.json()) == 1
+    assert saved_history.json()[0]["crop_name"] == "Milho"
+
+    # 8. Conversar com o assistente determinístico
     chat_res = client.post("/api/v1/assistant/chat", headers=auth_headers, json={
         "property_id": prop_id,
         "message": "Por que a rotação com sorgo e crotalária foi recomendada para a minha terra?"
@@ -172,11 +250,27 @@ def test_property_and_plots_flow(auth_headers):
     assert chat_res.status_code == 200
     assert "reply" in chat_res.json()
     assert len(chat_res.json()["reply"]) > 50
+    assistant_history = client.get(
+        "/api/v1/assistant/history",
+        headers=auth_headers,
+        params={"property_id": prop_id}
+    )
+    assert assistant_history.status_code == 200
+    assert [entry["role"] for entry in assistant_history.json()] == ["user", "assistant"]
 
-    # 8. Dashboard Integrado
+    # 9. Dashboard Integrado
     dash_res = client.get(f"/api/v1/dashboard/summary/{prop_id}", headers=auth_headers)
     assert dash_res.status_code == 200
     dash = dash_res.json()
     assert dash["property"]["name"] == "Sítio Terra Prometida"
     assert len(dash["plots"]) == 1
     assert "environmental_kpis" in dash
+
+    delete_res = client.delete(f"/api/v1/properties/{prop_id}", headers=auth_headers)
+    assert delete_res.status_code == 204
+    assert client.get(f"/api/v1/properties/{prop_id}", headers=auth_headers).status_code == 404
+    assert client.get(
+        "/api/v1/assistant/history",
+        headers=auth_headers,
+        params={"property_id": prop_id}
+    ).json() == []
