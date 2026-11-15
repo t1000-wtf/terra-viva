@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { Menu, Sprout } from 'lucide-react'
 import { Sidebar } from './Sidebar'
+import { BackendStatusBanner } from '../common/BackendStatusBanner'
 
 export function AppLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -51,6 +52,7 @@ export function AppLayout() {
         {/* Scrollable content container */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           <div className="max-w-7xl mx-auto">
+            <BackendStatusBanner />
             <Outlet />
           </div>
         </main>

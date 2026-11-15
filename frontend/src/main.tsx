@@ -8,7 +8,8 @@ import './index.css'
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 1,
+      // The HTTP client owns sequential retries for transient GET failures.
+      retry: false,
       staleTime: 30000,
     },
   },
